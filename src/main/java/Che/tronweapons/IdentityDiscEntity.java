@@ -1,0 +1,238 @@
+package Che.tronweapons;
+
+import net.minecraft.core.Direction;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.ThrowableItemProjectile;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.Vec3;
+
+public class IdentityDiscEntity extends ThrowableItemProjectile {
+
+    private boolean returning = false;
+    private int flightTicks = 0;
+    private int ricochets = 0;
+
+    public IdentityDiscEntity(EntityType<? extends IdentityDiscEntity> type, Level level) {
+        super(type, level);
+    }
+
+    public IdentityDiscEntity(Level level, LivingEntity owner) {
+        super(Tronweapons.IDENTITY_DISC_ENTITY.get(), owner, level);
+    }
+
+    @Override
+    protected Item getDefaultItem() {
+        return Tronweapons.IDENTITY_DISC.get();
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        flightTicks++;
+
+        // Movie-style glowing trail.
+        if (level().isClientSide) {
+            Vec3 motion = getDeltaMovement();
+            double x = getX() - motion.x * 0.18D;
+            double y = getY() - motion.y * 0.18D;
+            double z = getZ() - motion.z * 0.18D;
+
+            level().addParticle(ParticleTypes.ELECTRIC_SPARK, x, y, z, 0.0D, 0.0D, 0.0D);
+
+            if ((flightTicks & 1) == 0) {
+                level().addParticle(ParticleTypes.END_ROD, x, y, z, 0.0D, 0.0D, 0.0D);
+            }
+        }
+
+        Entity ownerEntity = getOwner();
+        if (!(ownerEntity instanceof Player player)) {
+            if (!level().isClientSide && flightTicks > 200) {
+                discard();
+            }
+            return;
+        }
+
+        // If the owner dies, do not leave their one-disc lock stuck forever.
+        if (!player.isAlive()) {
+            if (!level().isClientSide) {
+                unlockOwner(player);
+                discard();
+            }
+            return;
+        }
+
+        // If it misses everything, begin the boomerang return after a short flight.
+        if (flightTicks >= 24) {
+            returning = true;
+        }
+
+        if (!returning) {
+            return;
+        }
+
+        setNoGravity(true);
+
+        // Aim for the player's catching hand/chest area rather than the feet.
+        Vec3 target = player.getEyePosition().add(0.0D, -0.55D, 0.0D);
+        Vec3 toOwner = target.subtract(position());
+        double distance = toOwner.length();
+
+        if (distance < 1.25D) {
+            if (!level().isClientSide) {
+                returnDiscToPlayer(player);
+            }
+            return;
+        }
+
+        // Smooth, fast homing gives it the curved TRON return instead of snapping home.
+        Vec3 desiredVelocity = toOwner.normalize().scale(1.35D);
+        Vec3 currentVelocity = getDeltaMovement();
+
+        setDeltaMovement(
+                currentVelocity.scale(0.52D)
+                        .add(desiredVelocity.scale(0.48D))
+        );
+    }
+
+    private void returnDiscToPlayer(Player player) {
+        ItemStack returnedStack = getItem().copy();
+
+        if (returnedStack.isEmpty()) {
+            returnedStack = new ItemStack(Tronweapons.IDENTITY_DISC.get());
+        }
+
+        if (!player.getAbilities().instabuild) {
+            if (!player.getInventory().add(returnedStack)) {
+                player.drop(returnedStack, false);
+            }
+        }
+
+        level().playSound(
+                null,
+                player.blockPosition(),
+                SoundEvents.ITEM_PICKUP,
+                SoundSource.PLAYERS,
+                0.65F,
+                1.85F
+        );
+
+        // The disc is back in the owner's possession, so another throw is allowed.
+        unlockOwner(player);
+        discard();
+    }
+
+    @Override
+    protected void onHitEntity(EntityHitResult hitResult) {
+        Entity target = hitResult.getEntity();
+        Entity ownerEntity = getOwner();
+
+        // The owner's own returning disc is safe to catch.
+        if (target == ownerEntity) {
+            return;
+        }
+
+        super.onHitEntity(hitResult);
+
+        if (!level().isClientSide) {
+            target.hurt(damageSources().thrown(this, ownerEntity), 12.0F);
+
+            level().playSound(
+                    null,
+                    blockPosition(),
+                    SoundEvents.TRIDENT_HIT,
+                    SoundSource.PLAYERS,
+                    0.9F,
+                    1.55F
+            );
+        }
+
+        // Movie discs turn back toward the user after landing a hit.
+        returning = true;
+        setNoGravity(true);
+        setDeltaMovement(getDeltaMovement().scale(-0.25D));
+    }
+
+    @Override
+    protected void onHitBlock(BlockHitResult hitResult) {
+        super.onHitBlock(hitResult);
+
+        if (returning) {
+            return;
+        }
+
+        Vec3 motion = getDeltaMovement();
+        Direction face = hitResult.getDirection();
+
+        Vec3 bounced;
+        switch (face.getAxis()) {
+            case X -> bounced = new Vec3(-motion.x, motion.y, motion.z);
+            case Y -> bounced = new Vec3(motion.x, -motion.y, motion.z);
+            case Z -> bounced = new Vec3(motion.x, motion.y, -motion.z);
+            default -> bounced = motion.scale(-1.0D);
+        }
+
+        ricochets++;
+
+        setPos(
+                hitResult.getLocation().x + face.getStepX() * 0.08D,
+                hitResult.getLocation().y + face.getStepY() * 0.08D,
+                hitResult.getLocation().z + face.getStepZ() * 0.08D
+        );
+
+        setDeltaMovement(bounced.scale(0.92D));
+        setNoGravity(true);
+
+        if (!level().isClientSide) {
+            level().playSound(
+                    null,
+                    blockPosition(),
+                    SoundEvents.ANVIL_LAND,
+                    SoundSource.PLAYERS,
+                    0.45F,
+                    1.9F
+            );
+        }
+
+        // Let skilled throws bounce a couple of times before the automatic return.
+        if (ricochets >= 3) {
+            returning = true;
+        }
+    }
+
+    @Override
+    protected float getGravity() {
+        // An energized disc flies almost flat like it does on the Grid.
+        return returning ? 0.0F : 0.004F;
+    }
+
+    private void unlockOwner(Player player) {
+        player.getPersistentData().putBoolean(IdentityDiscItem.DISC_OUT_TAG, false);
+    }
+
+    @Override
+    public void addAdditionalSaveData(CompoundTag tag) {
+        super.addAdditionalSaveData(tag);
+        tag.putBoolean("Returning", returning);
+        tag.putInt("FlightTicks", flightTicks);
+        tag.putInt("Ricochets", ricochets);
+    }
+
+    @Override
+    public void readAdditionalSaveData(CompoundTag tag) {
+        super.readAdditionalSaveData(tag);
+        returning = tag.getBoolean("Returning");
+        flightTicks = tag.getInt("FlightTicks");
+        ricochets = tag.getInt("Ricochets");
+    }
+}
