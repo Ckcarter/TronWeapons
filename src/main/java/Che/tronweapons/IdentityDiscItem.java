@@ -33,14 +33,9 @@ public class IdentityDiscItem extends SwordItem {
             IdentityDiscEntity disc = new IdentityDiscEntity(level, player);
             disc.setItem(stack.copy());
 
-            disc.shootFromRotation(
-                    player,
-                    player.getXRot(),
-                    player.getYRot(),
-                    0.0F,
-                    2.25F,
-                    0.0F
-            );
+            // Launch exactly along the player's look vector, without inherited
+            // player movement or vanilla projectile spread.
+            disc.setStraightFlight(player.getLookAngle());
 
             level.addFreshEntity(disc);
 

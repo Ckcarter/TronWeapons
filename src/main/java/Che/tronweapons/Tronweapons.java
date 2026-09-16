@@ -7,6 +7,7 @@ import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.client.renderer.entity.EntityRenderers;
+import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
@@ -62,6 +63,20 @@ public class Tronweapons {
     public static final RegistryObject<Item> LIGHT_BATON = ITEMS.register("light_baton",
             () -> new LightBatonItem(new Item.Properties().stacksTo(1).durability(900)));
 
+    public static final RegistryObject<Item> ENERGY_BATON = ITEMS.register("energy_baton",
+            () -> new EnergyBatonItem(new Item.Properties().stacksTo(1).durability(1100)));
+
+    public static final RegistryObject<Item> RECOGNIZER_BOLT = ITEMS.register("recognizer_bolt",
+            () -> new Item(new Item.Properties()));
+
+    public static final RegistryObject<Item> RECOGNIZER_CANNON = ITEMS.register("recognizer_cannon",
+            () -> new RecognizerCannonItem(new Item.Properties().stacksTo(1).durability(500)));
+
+    public static final RegistryObject<EntityType<RecognizerBlastEntity>> RECOGNIZER_BLAST_ENTITY = ENTITY_TYPES.register("recognizer_blast",
+            () -> EntityType.Builder.<RecognizerBlastEntity>of(RecognizerBlastEntity::new, MobCategory.MISC)
+                    .sized(0.35F, 0.35F).clientTrackingRange(8).updateInterval(1)
+                    .build(MODID + ":recognizer_blast"));
+
     public static final RegistryObject<EntityType<IdentityDiscEntity>> IDENTITY_DISC_ENTITY = ENTITY_TYPES.register("identity_disc",
             () -> EntityType.Builder.<IdentityDiscEntity>of(IdentityDiscEntity::new, MobCategory.MISC)
                     .sized(0.45F, 0.12F).clientTrackingRange(8).updateInterval(1)
@@ -72,6 +87,8 @@ public class Tronweapons {
         output.accept(EXAMPLE_ITEM.get()); // Add the example item to the tab.
         output.accept(IDENTITY_DISC.get()); // Add the Identity Disc to this tab.
         output.accept(LIGHT_BATON.get()); // Add the Light Baton to this tab.
+        output.accept(ENERGY_BATON.get());
+        output.accept(RECOGNIZER_CANNON.get());
     }).build());
 
     public Tronweapons() {
@@ -131,7 +148,10 @@ public class Tronweapons {
             // Some client setup code
             LOGGER.info("HELLO FROM CLIENT SETUP");
             LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
-            event.enqueueWork(() -> EntityRenderers.register(IDENTITY_DISC_ENTITY.get(), IdentityDiscRenderer::new));
+            event.enqueueWork(() -> {
+                EntityRenderers.register(IDENTITY_DISC_ENTITY.get(), IdentityDiscRenderer::new);
+                EntityRenderers.register(RECOGNIZER_BLAST_ENTITY.get(), ThrownItemRenderer::new);
+            });
         }
     }
 }

@@ -1,6 +1,7 @@
 package Che.tronweapons;
 
 import net.minecraft.core.Direction;
+import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.sounds.SoundEvents;
@@ -16,12 +17,20 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Vector3f;
 
 public class IdentityDiscEntity extends ThrowableItemProjectile {
 
     private boolean returning = false;
     private int flightTicks = 0;
     private int ricochets = 0;
+    private Vec3 straightVelocity = Vec3.ZERO;
+
+    public void setStraightFlight(Vec3 direction) {
+        straightVelocity = direction.normalize().scale(2.25D);
+        setNoGravity(true);
+        setDeltaMovement(straightVelocity);
+    }
 
     public IdentityDiscEntity(EntityType<? extends IdentityDiscEntity> type, Level level) {
         super(type, level);
@@ -38,20 +47,49 @@ public class IdentityDiscEntity extends ThrowableItemProjectile {
 
     @Override
     public void tick() {
+        // Preserve the original throw direction and speed; vanilla projectile drag
+        // must not bend, slow, or drop the disc during its outbound flight.
+        if (!returning && straightVelocity.lengthSqr() > 0.0D) {
+            setNoGravity(true);
+            setDeltaMovement(straightVelocity);
+        }
         super.tick();
         flightTicks++;
+        if (!returning && straightVelocity.lengthSqr() > 0.0D) {
+            setDeltaMovement(straightVelocity);
+        }
 
         // Movie-style glowing trail.
         if (level().isClientSide) {
             Vec3 motion = getDeltaMovement();
-            double x = getX() - motion.x * 0.18D;
-            double y = getY() - motion.y * 0.18D;
-            double z = getZ() - motion.z * 0.18D;
 
-            level().addParticle(ParticleTypes.ELECTRIC_SPARK, x, y, z, 0.0D, 0.0D, 0.0D);
+            // Bright retro-blue light trail behind the 1982 Identity Disc.
+            DustParticleOptions blueGlow =
+                    new DustParticleOptions(new Vector3f(0.15F, 0.75F, 1.0F), 1.35F);
 
+            for (int i = 0; i < 4; i++) {
+                double offset = 0.16D + (i * 0.11D);
+
+                double px = getX() - motion.x * offset;
+                double py = getY() - motion.y * offset;
+                double pz = getZ() - motion.z * offset;
+
+                level().addParticle(
+                        blueGlow,
+                        px, py, pz,
+                        0.0D, 0.0D, 0.0D
+                );
+            }
+
+            // A smaller white-blue core makes the trail look luminous.
             if ((flightTicks & 1) == 0) {
-                level().addParticle(ParticleTypes.END_ROD, x, y, z, 0.0D, 0.0D, 0.0D);
+                level().addParticle(
+                        ParticleTypes.END_ROD,
+                        getX() - motion.x * 0.12D,
+                        getY() - motion.y * 0.12D,
+                        getZ() - motion.z * 0.12D,
+                        0.0D, 0.0D, 0.0D
+                );
             }
         }
 
@@ -72,7 +110,7 @@ public class IdentityDiscEntity extends ThrowableItemProjectile {
             return;
         }
 
-        // If it misses everything, begin the boomerang return after a short flight.
+        // If it misses everything, begin a direct return after a short flight.
         if (flightTicks >= 24) {
             returning = true;
         }
@@ -95,14 +133,9 @@ public class IdentityDiscEntity extends ThrowableItemProjectile {
             return;
         }
 
-        // Smooth, fast homing gives it the curved TRON return instead of snapping home.
+        // Straight return: point directly at the owner with no boomerang-style side swing.
         Vec3 desiredVelocity = toOwner.normalize().scale(1.35D);
-        Vec3 currentVelocity = getDeltaMovement();
-
-        setDeltaMovement(
-                currentVelocity.scale(0.52D)
-                        .add(desiredVelocity.scale(0.48D))
-        );
+        setDeltaMovement(desiredVelocity);
     }
 
     private void returnDiscToPlayer(Player player) {
@@ -190,7 +223,8 @@ public class IdentityDiscEntity extends ThrowableItemProjectile {
                 hitResult.getLocation().z + face.getStepZ() * 0.08D
         );
 
-        setDeltaMovement(bounced.scale(0.92D));
+        straightVelocity = bounced.normalize().scale(2.25D);
+        setDeltaMovement(straightVelocity);
         setNoGravity(true);
 
         if (!level().isClientSide) {
@@ -213,7 +247,7 @@ public class IdentityDiscEntity extends ThrowableItemProjectile {
     @Override
     protected float getGravity() {
         // An energized disc flies almost flat like it does on the Grid.
-        return returning ? 0.0F : 0.004F;
+        return 0.0F;
     }
 
     private void unlockOwner(Player player) {
@@ -226,6 +260,9 @@ public class IdentityDiscEntity extends ThrowableItemProjectile {
         tag.putBoolean("Returning", returning);
         tag.putInt("FlightTicks", flightTicks);
         tag.putInt("Ricochets", ricochets);
+        tag.putDouble("StraightX", straightVelocity.x);
+        tag.putDouble("StraightY", straightVelocity.y);
+        tag.putDouble("StraightZ", straightVelocity.z);
     }
 
     @Override
@@ -234,5 +271,6 @@ public class IdentityDiscEntity extends ThrowableItemProjectile {
         returning = tag.getBoolean("Returning");
         flightTicks = tag.getInt("FlightTicks");
         ricochets = tag.getInt("Ricochets");
+        straightVelocity = new Vec3(tag.getDouble("StraightX"), tag.getDouble("StraightY"), tag.getDouble("StraightZ"));
     }
 }
