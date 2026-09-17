@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/handheld",
   "textures": {
-    "layer0": "tronweapons:item/light_baton"
+    "layer0": "tronweapons:item/energy_shield"
   }
 }

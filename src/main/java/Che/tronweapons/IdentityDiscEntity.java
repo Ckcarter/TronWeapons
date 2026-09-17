@@ -64,8 +64,13 @@ public class IdentityDiscEntity extends ThrowableItemProjectile {
             Vec3 motion = getDeltaMovement();
 
             // Bright retro-blue light trail behind the 1982 Identity Disc.
-            DustParticleOptions blueGlow =
-                    new DustParticleOptions(new Vector3f(0.15F, 0.75F, 1.0F), 1.35F);
+            Item discItem = getItem().getItem();
+            Vector3f trailColor = discItem == Tronweapons.RED_IDENTITY_DISC.get()
+                    ? new Vector3f(1.0F, 0.08F, 0.12F)
+                    : discItem == Tronweapons.ORANGE_IDENTITY_DISC.get()
+                    ? new Vector3f(1.0F, 0.42F, 0.04F)
+                    : new Vector3f(0.15F, 0.75F, 1.0F);
+            DustParticleOptions blueGlow = new DustParticleOptions(trailColor, 1.35F);
 
             for (int i = 0; i < 4; i++) {
                 double offset = 0.16D + (i * 0.11D);
@@ -142,7 +147,7 @@ public class IdentityDiscEntity extends ThrowableItemProjectile {
         ItemStack returnedStack = getItem().copy();
 
         if (returnedStack.isEmpty()) {
-            returnedStack = new ItemStack(Tronweapons.IDENTITY_DISC.get());
+            returnedStack = new ItemStack(getDefaultItem());
         }
 
         if (!player.getAbilities().instabuild) {

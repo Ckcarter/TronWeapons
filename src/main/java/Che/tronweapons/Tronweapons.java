@@ -2,12 +2,13 @@ package Che.tronweapons;
 
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.item.ItemProperties;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.client.renderer.entity.EntityRenderers;
-import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
@@ -60,22 +61,13 @@ public class Tronweapons {
     public static final RegistryObject<Item> IDENTITY_DISC = ITEMS.register("identity_disc",
             () -> new IdentityDiscItem(new Item.Properties().stacksTo(1).durability(750)));
 
-    public static final RegistryObject<Item> LIGHT_BATON = ITEMS.register("light_baton",
-            () -> new LightBatonItem(new Item.Properties().stacksTo(1).durability(900)));
+//public static final RegistryObject<Item> LIGHT_SHIELD = ITEMS.register("light_shield",
+//            () -> new LightShieldItem(new Item.Properties().stacksTo(1).durability(950)));
 
-    public static final RegistryObject<Item> ENERGY_BATON = ITEMS.register("energy_baton",
-            () -> new EnergyBatonItem(new Item.Properties().stacksTo(1).durability(1100)));
-
-    public static final RegistryObject<Item> RECOGNIZER_BOLT = ITEMS.register("recognizer_bolt",
-            () -> new Item(new Item.Properties()));
-
-    public static final RegistryObject<Item> RECOGNIZER_CANNON = ITEMS.register("recognizer_cannon",
-            () -> new RecognizerCannonItem(new Item.Properties().stacksTo(1).durability(500)));
-
-    public static final RegistryObject<EntityType<RecognizerBlastEntity>> RECOGNIZER_BLAST_ENTITY = ENTITY_TYPES.register("recognizer_blast",
-            () -> EntityType.Builder.<RecognizerBlastEntity>of(RecognizerBlastEntity::new, MobCategory.MISC)
-                    .sized(0.35F, 0.35F).clientTrackingRange(8).updateInterval(1)
-                    .build(MODID + ":recognizer_blast"));
+    public static final RegistryObject<Item> RED_IDENTITY_DISC = ITEMS.register("red_identity_disc",
+            () -> new IdentityDiscItem(new Item.Properties().stacksTo(1).durability(750)));
+    public static final RegistryObject<Item> ORANGE_IDENTITY_DISC = ITEMS.register("orange_identity_disc",
+            () -> new IdentityDiscItem(new Item.Properties().stacksTo(1).durability(750)));
 
     public static final RegistryObject<EntityType<IdentityDiscEntity>> IDENTITY_DISC_ENTITY = ENTITY_TYPES.register("identity_disc",
             () -> EntityType.Builder.<IdentityDiscEntity>of(IdentityDiscEntity::new, MobCategory.MISC)
@@ -86,9 +78,8 @@ public class Tronweapons {
     public static final RegistryObject<CreativeModeTab> EXAMPLE_TAB = CREATIVE_MODE_TABS.register("example_tab", () -> CreativeModeTab.builder().withTabsBefore(CreativeModeTabs.COMBAT).icon(() -> EXAMPLE_ITEM.get().getDefaultInstance()).displayItems((parameters, output) -> {
         output.accept(EXAMPLE_ITEM.get()); // Add the example item to the tab.
         output.accept(IDENTITY_DISC.get()); // Add the Identity Disc to this tab.
-        output.accept(LIGHT_BATON.get()); // Add the Light Baton to this tab.
-        output.accept(ENERGY_BATON.get());
-        output.accept(RECOGNIZER_CANNON.get());
+        output.accept(RED_IDENTITY_DISC.get());
+        output.accept(ORANGE_IDENTITY_DISC.get());
     }).build());
 
     public Tronweapons() {
@@ -150,7 +141,6 @@ public class Tronweapons {
             LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
             event.enqueueWork(() -> {
                 EntityRenderers.register(IDENTITY_DISC_ENTITY.get(), IdentityDiscRenderer::new);
-                EntityRenderers.register(RECOGNIZER_BLAST_ENTITY.get(), ThrownItemRenderer::new);
             });
         }
     }

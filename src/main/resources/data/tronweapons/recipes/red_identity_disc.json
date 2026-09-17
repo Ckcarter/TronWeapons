@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "   ",
+    "IDI",
+    "   "
+  ],
+  "key": {
+    "I": {
+      "item": "tronweapons:identity_disc"
+    },
+    "D": {
+      "item": "minecraft:red_dye"
+    }
+  },
+  "result": {
+    "item": "tronweapons:red_identity_disc",
+    "count": 1
+  }
+}

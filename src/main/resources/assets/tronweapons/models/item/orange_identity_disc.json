@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "tronweapons:item/orange_identity_disc"
+  }
+}

@@ -1,6 +1,5 @@
 {
   "item.tronweapons.identity_disc": "Identity Disc",
-  "item.tronweapons.light_baton": "Light Baton",
-  "item.tronweapons.energy_baton": "Energy Baton",
-  "item.tronweapons.recognizer_cannon": "Recognizer Cannon"
+  "item.tronweapons.red_identity_disc": "Red Identity Disc",
+  "item.tronweapons.orange_identity_disc": "Orange Identity Disc"
 }
